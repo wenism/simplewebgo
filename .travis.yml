@@ -1,0 +1,25 @@
+language: go
+
+sudo: required
+
+go:
+  - 1.6
+  
+services:
+  - docker
+
+before_install:  
+  - export APP_VERSION=`git describe --tag --long`
+  - export BUILT_USING=`go version | awk '{print $3}'`
+  - export BUILT_ON=`TZ=Australia/Sydney date +"%d/%m/%Y-%T"`
+  - echo $APP_VERSION - $BUILT_ON - $BUILT_USING
+  
+script: 
+  - go test .
+  - CGO_ENABLED=0 GOOS=linux go build -a -ldflags "-X main.AppVersion=$APP_VERSION -X main.BuiltUsing=$BUILT_USING -X main.BuiltOn=$BUILT_ON" -o simpleweb simpleweb.go
+
+after_success:  
+  - docker build -t wenism/simplewebgo:latest -t wenism/simplewebgo:$APP_VERSION .
+  - docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
+  - docker push wenism/simplewebgo:latest
+  - docker push wenism/simplewebgo:$APP_VERSION
